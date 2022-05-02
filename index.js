@@ -31,9 +31,7 @@ promise.then(() => {
 app.post('/participants',async (request, response) => {
     try {
         const participant = await request.body;
-
         const participants = await dataBase.collection("participantsDB").find({}).toArray();
-
         if(participants.some((el) => el.name == participant.name)){
             response.sendStatus(409);
             return;
@@ -104,19 +102,24 @@ app.get('/messages',async (request, response) => {
 app.post('/status', async (request, response) => {
     const { headers } = request;
     try {
-        const participants = await dataBase.collection("statusDB").find({}).toArray();
+        const participants = await dataBase.collection("participantsDB").find({}).toArray();
         if(!participants.some((el) => el.name == headers.user)){
             response.sendStatus(404);  
             return;
         }
-        // dataBase.collection("statusDB").updateOne(
-        //     {_id: headers.user._id },{ $set: req.body }
-        // );
+        dataBase.collection("participantsDB").updateOne(
+            {'name': headers.user},{ $set: {'lastStatus' : Date.now()} }
+        );
+        response.sendStatus(200);
     } catch {
         response.sendStatus(500);
     }
 
 })
+
+setInterval(async () => {
+    dataBase.collection("participantsDB").remove({lastStatus : {$lt : Date.now() - 10000}});
+}, 15000);
 
 app.listen(5000, () => {
     console.log("server on");
