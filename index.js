@@ -1,6 +1,6 @@
 import express, { json } from "express";
 import cors from 'cors';
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import dotenv from "dotenv";
 dotenv.config();
 import Joi from "joi";
@@ -21,7 +21,7 @@ app.use(json());
 app.use(cors());
 
 let dataBase = null;
-const mongoClient = new MongoClient('mongodb://localhost:27017');
+const mongoClient = new MongoClient(process.env.MONGO_URI);
 const promise = mongoClient.connect();
 promise.then(() => {
     dataBase = mongoClient.db("dados");
@@ -85,7 +85,7 @@ app.get('/messages',async (request, response) => {
     const messages = await dataBase.collection("messagesDB").find({}).toArray();
     try {
         const messagesPassed = messages.filter((el) => (el.from == headers.user || el.to == headers.user || el.type == 'message'));
-        if(limit){
+        if(limit && limit < messagesPassed.length){
             let messagesSelect = [];
             for(let i = messagesPassed.length -1; i >= messagesPassed.length - limit; i --){
                 messagesSelect.push(messagesPassed[i]);
@@ -116,9 +116,31 @@ app.post('/status', async (request, response) => {
     }
 
 })
+/////////
+app.delete('/messages/:ID',async (request, response) => {
+    const { headers } = request;
+    const id = request.params.ID;
+    const messages = await dataBase.collection("messagesDB").find({}).toArray();
+    try {
+        if(messages.some((el) => el._id == id)){
+            if(messages.some((el) => el.from != headers.user)){
+                response.sendStatus(401);
+                return;
+            }
+            dataBase.collection("messagesDB").remove({'_id' : ObjectId(id)});
+            response.sendStatus(200);
+            return;
+        }
+        response.sendStatus(404);
+    } catch {
+        response.sendStatus(500);
+    }
+})
+
+/////////
 
 setInterval(async () => {
-    dataBase.collection("participantsDB").remove({lastStatus : {$lt : Date.now() - 10000}});
+    // dataBase.collection("participantsDB").remove({lastStatus : {$lt : Date.now() - 10000}});
 }, 15000);
 
 app.listen(5000, () => {
