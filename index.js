@@ -16,6 +16,12 @@ const participantSchema = Joi.object({
     name: Joi.string().required()
 })
 
+const putMessageSchema = Joi.object({
+    to: Joi.string(),
+    text: Joi.string(),
+    type: ['message', 'private_message']
+})
+
 const app = express();
 app.use(json());
 app.use(cors());
@@ -137,10 +143,40 @@ app.delete('/messages/:ID',async (request, response) => {
     }
 })
 
+// app.put('/messages/:ID', async (request, response) => {
+//     const { body, headers } = request;
+//     const id = request.params.ID;
+//     const participants = await dataBase.collection("participantsDB").find({}).toArray();
+//     const messages = await dataBase.collection("messagesDB").find({}).toArray();
+//     console.log(body[2]);
+//     try {
+//         const { error, value } = putMessageSchema.validate(body);
+//         if(participants.some((el) => el.name == headers.user) && !error){
+//             if(value.from != headers.user){
+//                 response.sendStatus(401);
+//                 return;
+//             }
+//             if(messages.some((el) => el._id == ObjectId(id))){
+//                 let update = [];
+//                 body.to ? update.push({'to' : body.to}) : '';
+//                 body.text ? update.push({'to' : body.text}) : '';
+//                 body.type ? update.push({'to' : body.type}) : '';
+//                 dataBase.collection("messagesDB").updateOne({'_id' : ObjectId(id)}, {$set: update});
+//                 response.sendStatus(200);
+//             }
+//             response.sendStatus(404);  
+//             return;
+//         }
+//         response.sendStatus(422);  
+//     } catch {
+//         response.sendStatus(500);
+//     }
+// })
+
 /////////
 
 setInterval(async () => {
-    // dataBase.collection("participantsDB").remove({lastStatus : {$lt : Date.now() - 10000}});
+    dataBase.collection("participantsDB").remove({lastStatus : {$lt : Date.now() - 10000}});
 }, 15000);
 
 app.listen(5000, () => {
